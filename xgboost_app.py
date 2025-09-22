@@ -33,9 +33,18 @@ if uploaded_file is not None:
     X = df.drop(columns=[target_col])
     y = df[target_col]
 
+    # ---------------------------
     # Train-test split
+    # ---------------------------
+    # Check if stratify is possible (at least 2 classes in target)
+    if y.nunique() > 1:
+        stratify_param = y
+    else:
+        stratify_param = None
+        st.warning("Target has only 1 class. Stratification disabled for train-test split.")
+
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.15, stratify=y, random_state=42
+        X, y, test_size=0.15, stratify=stratify_param, random_state=42
     )
 
     # ---------------------------
@@ -60,10 +69,10 @@ if uploaded_file is not None:
     # Metrics Calculation
     # ---------------------------
     acc = accuracy_score(y_test, y_pred)
-    prec = precision_score(y_test, y_pred)
-    rec = recall_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
-    auc = roc_auc_score(y_test, y_pred_proba)
+    prec = precision_score(y_test, y_pred, zero_division=0)
+    rec = recall_score(y_test, y_pred, zero_division=0)
+    f1 = f1_score(y_test, y_pred, zero_division=0)
+    auc = roc_auc_score(y_test, y_pred_proba) if y.nunique() > 1 else 0.0
 
     st.subheader("Performance Metrics")
     metrics_df = pd.DataFrame({
@@ -88,15 +97,16 @@ if uploaded_file is not None:
     # ---------------------------
     # ROC Curve
     # ---------------------------
-    st.subheader("ROC Curve")
-    fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
-    fig_roc, ax_roc = plt.subplots()
-    ax_roc.plot(fpr, tpr, label=f"XGBoost (AUC = {auc:.3f})")
-    ax_roc.plot([0, 1], [0, 1], "k--")
-    ax_roc.set_xlabel("False Positive Rate")
-    ax_roc.set_ylabel("True Positive Rate")
-    ax_roc.legend(loc="lower right")
-    st.pyplot(fig_roc)
+    if y.nunique() > 1:
+        st.subheader("ROC Curve")
+        fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
+        fig_roc, ax_roc = plt.subplots()
+        ax_roc.plot(fpr, tpr, label=f"XGBoost (AUC = {auc:.3f})")
+        ax_roc.plot([0, 1], [0, 1], "k--")
+        ax_roc.set_xlabel("False Positive Rate")
+        ax_roc.set_ylabel("True Positive Rate")
+        ax_roc.legend(loc="lower right")
+        st.pyplot(fig_roc)
 
     # ---------------------------
     # Feature Importance
@@ -114,3 +124,4 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Upload a CSV file to begin.")
+
