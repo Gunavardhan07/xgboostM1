@@ -34,17 +34,25 @@ if uploaded_file is not None:
     y = df[target_col]
 
     # ---------------------------
+    # Encode categorical columns
+    # ---------------------------
+    X = pd.get_dummies(X, drop_first=True)
+
+    # ---------------------------
     # Train-test split
     # ---------------------------
-    # Check if stratify is possible (at least 2 classes in target)
     if y.nunique() > 1:
         stratify_param = y
     else:
         stratify_param = None
         st.warning("Target has only 1 class. Stratification disabled for train-test split.")
 
+    # Ensure test size is valid
+    test_size = 0.15
+    if len(df) < 10:
+        test_size = 0.2  # small datasets
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.15, stratify=stratify_param, random_state=42
+        X, y, test_size=test_size, stratify=stratify_param, random_state=42
     )
 
     # ---------------------------
